@@ -30,10 +30,10 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 
   //upload them to cloud storage
-  const avatar = await uploadOnCloudnary(avatarLocalFilePath);
-  const coverImage = null;
+  const avatar = await uploadOnCloudinary(avatarLocalFilePath);
+  let coverImage = null;
   if (coverImageLocalFilePath) {
-    coverImage = await uploadOnCloudnary(coverImageLocalFilePath);
+    coverImage = await uploadOnCloudinary(coverImageLocalFilePath);
   }
   if (!avatar) throw new Error(400, "Avatar is Required");
   //create user object - entry in database
@@ -55,7 +55,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new Error(500, "Something went wrong while registering user");
   }
   //return response
-  return response
+  return res
     .status(200)
     .json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
