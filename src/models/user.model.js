@@ -31,6 +31,7 @@ const userSchema = new mongoose.Schema(
     },
     coverImage: {
       type: String,
+      default: "",
     },
     watchHistory: [
       {
@@ -42,8 +43,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "password is required"],
     },
-    refereshToken: {
+    refreshToken: {
       type: String,
+      default: "",
     },
   },
   { timestamps: true }
@@ -62,8 +64,8 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 };
 
 //Creating Access and Refresh tokens
-userSchema.methods.generateAccessToken = async function () {
-  return await jwt.sign(
+userSchema.methods.generateAccessToken = function () {
+  return jwt.sign(
     {
       _id: this._id,
     },

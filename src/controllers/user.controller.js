@@ -7,9 +7,9 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 const generateAccessTokenAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
-    const accessToken = user.generateAccessToken();
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
 
-    const refreshToken = user.generateRefreshToken();
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
 
@@ -48,10 +48,13 @@ export const registerUser = asyncHandler(async (req, res) => {
   //upload them to cloud storage
   const avatar = await uploadOnCloudinary(avatarLocalFilePath);
   let coverImage = null;
+
   if (coverImageLocalFilePath) {
     coverImage = await uploadOnCloudinary(coverImageLocalFilePath);
   }
+
   if (!avatar) throw new Error(400, "Avatar is Required");
+
   //create user object - entry in database
   const user = await User.create({
     username,
@@ -63,13 +66,13 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   //remove password and refresh token from res
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
+  const createdUser = await User.findById(user._id, "-password -refreshToken");
+
   //check for user created
   if (!createdUser) {
     throw new Error(500, "Something went wrong while registering user");
   }
+
   //return response
   return res
     .status(200)
@@ -80,33 +83,39 @@ export const registerUser = asyncHandler(async (req, res) => {
 export const loginUser = asyncHandler(async (req, res) => {
   //get request data
   const { username, email, password } = req.body;
+
   //username or email is required
   if (!username && !email) {
     throw new ApiError(400, "Username or email is required");
   }
+
   //find the user
   const user = await User.findOne({ $or: [{ username }, { email }] });
+
   if (!user) {
     throw new ApiError(404, "User not found");
   }
+
   //password check
   const isPasswordValid = await user.isPasswordCorrect(password);
+
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid password");
   }
-  //access token and refresh token
-  const { accessToken, refreshToken } = generateAccessTokenAndRefreshToken(
-    user._id
-  );
 
+  //access token and refresh token
+  const { accessToken, refreshToken } =
+    await generateAccessTokenAndRefreshToken(user._id);
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
+
   //send cookie
   const options = {
     httpOnly: true,
     secure: true,
   };
+
   res
     .status(200)
     .cookie("accessToken", accessToken, options)
